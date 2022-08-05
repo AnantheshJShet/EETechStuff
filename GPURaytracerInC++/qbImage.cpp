@@ -21,7 +21,7 @@
 
 ***********************************************************/
 
-#include "qbImage.hpp"
+#include "qbImage.h"
 
 // The default constructor.
 qbImage::qbImage()
@@ -76,7 +76,7 @@ int qbImage::GetYSize()
 }
 
 // Function to generate the display.
-void qbImage::Display()
+void qbImage::Display(bool flip_image)
 {
 	// Compute maximum values.
 	ComputeMaxValues();
@@ -108,7 +108,20 @@ void qbImage::Display()
 	srcRect.w = m_xSize;
 	srcRect.h = m_ySize;
 	bounds = srcRect;
-	SDL_RenderCopy(m_pRenderer, m_pTexture, &srcRect, &bounds);
+
+	/****************************************************************************\
+	* With the existing code, the SDL rendered image is upside down. To fix this, 
+	* we use a bit of a hack, using the SDL_RenderCopyEx() method which allows 
+	* you to have SDL flip or rotate the image prior to rendering
+	\****************************************************************************/
+	SDL_RendererFlip renderer_flip = SDL_FLIP_NONE;
+	if (flip_image == true) {
+		renderer_flip = SDL_FLIP_VERTICAL;
+	}
+	SDL_RenderCopyEx(m_pRenderer, m_pTexture, &srcRect, &bounds, 0.0, NULL, renderer_flip);
+	/****************************************************************************/
+
+	//SDL_RenderCopy(m_pRenderer, m_pTexture, &srcRect, &bounds);
 }
 
 // Function to initialize the texture.
@@ -150,7 +163,7 @@ Uint32 qbImage::ConvertColor(const double red, const double green, const double 
 #if SDL_BYTEORDER == SDL_BIG_ENDIAN
 	Uint32 pixelColor = (r << 24) + (g << 16) + (b << 8) + 255;
 #else
-	Uint32 pixelColor = (255 << 24) + (b << 16) + (g << 8) + r;
+	Uint32 pixelColor = (255 << 24) + (r << 16) + (g << 8) + b;
 #endif
 
 	return pixelColor;

@@ -41,12 +41,17 @@
 #include <chrono>
 
 #include "geometry.h"
+#include "qbImage.h"
 
+#pragma region Initialize
 static const float kInfinity = std::numeric_limits<float>::max();
 static const float kEpsilon = 1e-8;
 static const Vec3f kDefaultBackgroundColor = Vec3f(0.235294, 0.67451, 0.843137);
 template <> const Matrix44f Matrix44f::kIdentity = Matrix44f();
+qbImage m_image;
+#pragma endregion
 
+#pragma region Methods_Classes
 inline
 float clamp(const float &lo, const float &hi, const float &v)
 { return std::max(lo, std::min(hi, v)); }
@@ -340,7 +345,9 @@ Vec3f castRay(
 
     return hitColor;
 }
+#pragma endregion
 
+#pragma region Render
 // [comment]
 // The main render function. This where we iterate over all pixels in the image, generate
 // primary rays and cast these rays into the scene. The content of the framebuffer is
@@ -373,7 +380,24 @@ void render(
     auto timeEnd = std::chrono::high_resolution_clock::now();
     auto passedTime = std::chrono::duration<double, std::milli>(timeEnd - timeStart).count();
     fprintf(stderr, "\rDone: %.2f (sec)\n", passedTime / 1000);
+
+    /***********************************************\
+    * Code to send image to file
+    \***********************************************/
+    std::cout << "P3\n" << options.width << " " << options.height << "\n255\n";
+    for (int j = options.height - 1; j >= 0; --j) {
+        for (int i = 0; i < options.width; ++i) {
+            size_t pixel_index = j * options.width + i;
+            int r = int(255 * clamp(0, 1, framebuffer[pixel_index].x));
+            int g = int(255 * clamp(0, 1, framebuffer[pixel_index].y));
+            int b = int(255 * clamp(0, 1, framebuffer[pixel_index].z));
+
+            m_image.SetPixel(i, j, r, g, b);
+        }
+    }
+    /***********************************************/
     
+#if 0
     // save framebuffer to file
     char buff[256];
     sprintf(buff, "out.%04d.ppm", frame);
@@ -387,9 +411,11 @@ void render(
         ofs << r << g << b;
     }
     ofs.close();
-    
+#endif    
 }
+#pragma endregion
 
+#pragma region Main
 // [comment]
 // In the main function of the program, we create the scene (create objects and lights)
 // as well as set the options for the render (image widht and height, maximum recursion
@@ -397,6 +423,24 @@ void render(
 // [/comment]
 int main(int argc, char **argv)
 {
+#pragma region Initialize_SDL_window
+    SDL_Window *pWindow = NULL;
+    SDL_Renderer* pRenderer = NULL;
+    if (SDL_Init(SDL_INIT_EVERYTHING) < 0) {
+        return false;
+    }
+
+    pWindow = SDL_CreateWindow("RayTracer", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 640, 480, SDL_WINDOW_SHOWN);
+    if (pWindow != NULL) {
+        pRenderer = SDL_CreateRenderer(pWindow, -1, 0);
+
+        m_image.Initialize(640, 480, pRenderer);
+
+        // Set the background color to white
+        SDL_SetRenderDrawColor(pRenderer, 255, 255, 255, 255);
+        SDL_RenderClear(pRenderer);
+    }
+#pragma endregion
     // setting up options
     Options options;
     options.cameraToWorld = Matrix44f(0.931056, 0, 0.364877, 0, 0.177666, 0.873446, -0.45335, 0, -0.3187, 0.48692, 0.813227, 0, -41.229214, 81.862351, 112.456908, 1);
@@ -411,5 +455,35 @@ int main(int argc, char **argv)
     // finally, render
     render(options, objects, 0);
 
+    /**************************************************************\
+    * Code to display the image in a SDL window. Display the image. 
+    * This calls the qbImage object's display method, which copies
+    * the render image tothe SDL renderer backbuffer
+    \**************************************************************/
+    bool imageFlip = false;
+    m_image.Display(imageFlip);
+
+    // Show the result by copying the rendered pixels in the backbuffer
+    // to the render window
+    SDL_RenderPresent(pRenderer);
+    bool isRunning = true;
+    SDL_Event event;
+    while (isRunning) {
+        while (SDL_PollEvent(&event) != 0) {
+            if (event.type == SDL_QUIT) {
+                isRunning = false;
+            }
+            else if (event.type == SDL_KEYDOWN) { // Added code to allow realtime image flipping by hitting the "v" key
+                if (event.key.keysym.sym == SDLK_v) {
+                    imageFlip = !imageFlip;
+                    m_image.Display(imageFlip);
+                    SDL_RenderPresent(pRenderer);
+                }
+            }
+        }
+    }
+    /**************************************************************/
+
     return 0;
 }
+#pragma endregion

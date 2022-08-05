@@ -26,7 +26,7 @@
 
 #include <string>
 #include <vector>
-#include <SDL2/SDL.h>
+#include <SDL.h>
 
 class qbImage
 {
@@ -44,7 +44,7 @@ public:
 	void SetPixel(const int x, const int y, const double red, const double green, const double blue);
 
 	// Function to return the image for display.
-	void Display();
+	void Display(bool flip_image);
 
 	// Functions to return the dimensions of the image.
 	int GetXSize();
