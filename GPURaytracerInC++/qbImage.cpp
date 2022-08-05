@@ -19,20 +19,9 @@
 	GPLv3 LICENSE
 	Copyright (c) 2021 Michael Bennett
 
-	This program is free software: you can redistribute it and/or modify
-	it under the terms of the GNU General Public License as published by
-	the Free Software Foundation, either version 3 of the License, or
-	(at your option) any later version.
-	This program is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-	GNU General Public License for more details.
-	You should have received a copy of the GNU General Public License
-	along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
 ***********************************************************/
 
-#include "qbImage.h"
+#include "qbImage.hpp"
 
 // The default constructor.
 qbImage::qbImage()
@@ -85,9 +74,9 @@ int qbImage::GetYSize()
 {
 	return m_ySize;
 }
-#include <iostream>
+
 // Function to generate the display.
-void qbImage::Display(bool flipImage)
+void qbImage::Display()
 {
 	// Compute maximum values.
 	ComputeMaxValues();
@@ -119,20 +108,7 @@ void qbImage::Display(bool flipImage)
 	srcRect.w = m_xSize;
 	srcRect.h = m_ySize;
 	bounds = srcRect;
-
-	/****************************************************************************\
-	 With the existing code, the SDl rendered image is upside down. To fix this 
-	 we use a bit of a hack, using the SDL_RenderCopyEx() method which allows
-	 you to have SDL flip or rotate the image prior to rendering.
-	\****************************************************************************/
-	SDL_RendererFlip renderer_flip = SDL_FLIP_NONE;
-	if (flipImage == true) {
-		renderer_flip = SDL_FLIP_VERTICAL;
-	}
-	SDL_RenderCopyEx(m_pRenderer, m_pTexture, &srcRect, &bounds, 0.0, NULL, renderer_flip);
-	/****************************************************************************/
-
-	//SDL_RenderCopy(m_pRenderer, m_pTexture, &srcRect, &bounds);
+	SDL_RenderCopy(m_pRenderer, m_pTexture, &srcRect, &bounds);
 }
 
 // Function to initialize the texture.
@@ -174,7 +150,7 @@ Uint32 qbImage::ConvertColor(const double red, const double green, const double 
 #if SDL_BYTEORDER == SDL_BIG_ENDIAN
 	Uint32 pixelColor = (r << 24) + (g << 16) + (b << 8) + 255;
 #else
-	Uint32 pixelColor = (255 << 24) + (r << 16) + (g << 8) + b;
+	Uint32 pixelColor = (255 << 24) + (b << 16) + (g << 8) + r;
 #endif
 
 	return pixelColor;
